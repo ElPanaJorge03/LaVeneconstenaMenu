@@ -1,0 +1,35 @@
+/* Design Tokens Oficiales — La VeneConsteña */
+:root {
+  /* Marca */
+  --rojo: #E4492F;
+  --rojo-cta: #C8371E;
+  --rojo-hover: #AD2C16;
+  --rojo-soft: #FDECE8;
+
+  --verde: #8AB544;
+  --verde-text: #426312;
+  --verde-soft: #EEF6DF;
+
+  --mostaza: #E8B93E;
+  --mostaza-text: #7A5600;
+  --mostaza-soft: #FDF4D7;
+
+  --marron: #4A2C25;
+  --marron-muted: #75564E;
+  --crema: #FFF8EC;
+  --crema-elevated: #FAF0DE;
+  --blanco: #FFFFFF;
+  --borde: #EBDCCB;
+  --negro: #1A1A1A;
+
+  /* Tipografía */
+  --font-display: "Pacifico", cursive;
+  --font-heading: "Baloo 2", system-ui, sans-serif;
+  --font-body: "Nunito", system-ui, sans-serif;
+
+  /* Sombras Sticker */
+  --shadow-sticker-sm: 0 0 0 3px #FFFFFF, 0 4px 12px rgba(74, 44, 37, 0.08);
+  --shadow-sticker-md: 0 0 0 4px #FFFFFF, 0 10px 24px rgba(74, 44, 37, 0.12);
+  --shadow-sticker-lg: 0 0 0 5px #FFFFFF, 0 18px 36px rgba(74, 44, 37, 0.16);
+  --shadow-cta: 0 8px 20px -4px rgba(200, 55, 30, 0.38);
+}

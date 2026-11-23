@@ -1,0 +1,416 @@
+from django.core.management.base import BaseCommand
+from django.db import transaction
+
+from apps.menu.models import Adicional, Categoria, Producto
+
+MENU_DATA = [
+    {
+        "nombre": "Promociones",
+        "slug": "promociones",
+        "descripcion": "De Lunes a Jueves (No aplica festivos)",
+        "color_acento": Categoria.AccentColor.ROJO,
+        "es_promocion": True,
+        "orden": 1,
+        "productos": [
+            {"nombre": "2 Perros Sencillos", "precio_normal": 11000, "porciones_texto": "Lun a Jue", "etiqueta": "Promo x2"},
+            {"nombre": "2 Perros Gemelos", "precio_normal": 19000, "porciones_texto": "Lun a Jue", "etiqueta": "Promo x2"},
+            {"nombre": "2 Perros Medios Suizos", "precio_normal": 21000, "porciones_texto": "Lun a Jue", "etiqueta": "Promo x2"},
+            {"nombre": "2 Perros Suizos", "precio_normal": 30000, "porciones_texto": "Lun a Jue", "etiqueta": "Promo x2"},
+            {"nombre": "2 Hamburguesas Carne", "precio_normal": 28000, "porciones_texto": "Lun a Jue", "etiqueta": "Promo x2"},
+            {"nombre": "2 Salchipapas Sencillas", "precio_normal": 24000, "porciones_texto": "Lun a Jue", "etiqueta": "Promo x2"},
+        ],
+    },
+    {
+        "nombre": "Combos",
+        "slug": "combos",
+        "descripcion": "Incluyen papas francesas y gaseosa",
+        "color_acento": Categoria.AccentColor.MOSTAZA,
+        "es_promocion": True,
+        "orden": 2,
+        "productos": [
+            {
+                "nombre": "Combo Perro Sencillo",
+                "descripcion": "Perro Sencillo + Papas Francesas + Gaseosa",
+                "precio_normal": 17000,
+                "etiqueta": "Combo",
+            },
+            {
+                "nombre": "Combo Perro Suizo",
+                "descripcion": "Perro Suizo + Papas Francesas + Gaseosa",
+                "precio_normal": 24000,
+                "etiqueta": "Combo",
+            },
+            {
+                "nombre": "Combo Hamburguesa Carne",
+                "descripcion": "Hamburguesa Carne + Papas Francesas + Gaseosa",
+                "precio_normal": 22000,
+                "etiqueta": "Combo",
+            },
+        ],
+    },
+    {
+        "nombre": "Perros Calientes",
+        "slug": "perros-calientes",
+        "descripcion": "Clásicos, italianos, suizos y el especial de la casa",
+        "color_acento": Categoria.AccentColor.ROJO,
+        "orden": 3,
+        "productos": [
+            {"nombre": "Sencillo", "precio_normal": 6500, "precio_mini": 4000},
+            {"nombre": "Sencillo Plancha", "precio_normal": 7000, "precio_mini": 4000},
+            {"nombre": "Gemelo", "precio_normal": 11000, "precio_mini": 7000},
+            {"nombre": "Butiperro", "precio_normal": 13000, "precio_mini": 7500},
+            {"nombre": "Choriperro", "precio_normal": 13000, "precio_mini": 7500},
+            {"nombre": "Perro Pollo", "precio_normal": 14000, "precio_mini": 8000},
+            {"nombre": "Perro Carne", "precio_normal": 14000, "precio_mini": 8000},
+            {"nombre": "Combinado (Chori-Buti)", "precio_normal": 14000, "precio_mini": 8500},
+            {"nombre": "Mixto (Carne-Pollo)", "precio_normal": 15000, "precio_mini": 8500},
+            {"nombre": "Hawaiano", "precio_normal": 13000, "precio_mini": 7500},
+            {"nombre": "Ranchero", "precio_normal": 14000, "precio_mini": 7500},
+            {"nombre": "Escocés", "precio_normal": 17000, "precio_mini": 8500},
+            {"nombre": "Suizo", "precio_normal": 17000},
+            {"nombre": "Medio Suizo", "precio_normal": 12000},
+            {"nombre": "Italiano", "precio_normal": 13000},
+            {"nombre": "Italo Hawaiano", "precio_normal": 15000},
+            {"nombre": "Italo Ranchero", "precio_normal": 16000},
+            {"nombre": "Italo Suizo", "precio_normal": 18000},
+            {"nombre": "Italo Suizo Hawaiano", "precio_normal": 19000},
+            {"nombre": "Italo Suizo Hawaiano Especial", "precio_normal": 21000},
+            {
+                "nombre": "Perro La Costeña",
+                "descripcion": "Pollo, cerdo, suizo, chorizo, butifarra, mozzarella, lechuga, queso, chongo y salsas (tártara y piña). Acompañado de papas francesas.",
+                "precio_normal": 27000,
+                "es_especial": True,
+                "etiqueta": "Especial de la casa",
+            },
+        ],
+    },
+    {
+        "nombre": "Hamburguesas",
+        "slug": "hamburguesas",
+        "descripcion": "Jugosas a la plancha, en tamaño Normal o MINI",
+        "color_acento": Categoria.AccentColor.ROJO,
+        "orden": 4,
+        "productos": [
+            {"nombre": "Carne", "precio_normal": 15000, "precio_mini": 7500},
+            {"nombre": "Pollo", "precio_normal": 15000, "precio_mini": 7500},
+            {"nombre": "Doble Carne", "precio_normal": 19000, "precio_mini": 10000},
+            {"nombre": "Doble Pollo", "precio_normal": 19000, "precio_mini": 10000},
+            {"nombre": "Hawaiana", "precio_normal": 17000},
+            {"nombre": "Mixta (carne-pollo)", "precio_normal": 22000, "precio_mini": 12000},
+            {"nombre": "Especial de Carne", "precio_normal": 21000},
+            {"nombre": "Especial de Pollo", "precio_normal": 21000},
+            {
+                "nombre": "La Gran Venecosteña",
+                "descripcion": "Pollo, carne, cerdo, suizo, lechuga, tomate, cebolla caramelizada, jamón y gratinada con tocineta, acompañada de papas francesas.",
+                "precio_normal": 27000,
+                "es_especial": True,
+                "etiqueta": "Insignia",
+            },
+        ],
+    },
+    {
+        "nombre": "Salchipapas",
+        "slug": "salchipapas",
+        "descripcion": "Personales, MINI y bandejas gigantes para compartir hasta 7 personas",
+        "color_acento": Categoria.AccentColor.VERDE,
+        "orden": 5,
+        "productos": [
+            {"nombre": "Sencilla", "precio_normal": 12000, "precio_mini": 8000},
+            {"nombre": "Chorizo", "precio_normal": 18000, "precio_mini": 10000},
+            {"nombre": "Butifarra", "precio_normal": 17000, "precio_mini": 9500},
+            {"nombre": "Suiza", "precio_normal": 20000, "precio_mini": 11000},
+            {"nombre": "Ranchera", "precio_normal": 18500, "precio_mini": 10500},
+            {"nombre": "Escocés sencilla", "precio_normal": 19000, "precio_mini": 11000},
+            {"nombre": "Carne", "precio_normal": 21000, "precio_mini": 11000},
+            {"nombre": "Pollo", "precio_normal": 20000, "precio_mini": 11000},
+            {"nombre": "Hawaiana", "precio_normal": 19000, "precio_mini": 11000},
+            {"nombre": "Pollo Suizo", "precio_normal": 24000, "precio_mini": 13000},
+            {"nombre": "Combinada (Chori-Buti)", "precio_normal": 19000, "precio_mini": 11000},
+            {"nombre": "Mixta (carne-pollo)", "precio_normal": 22000, "precio_mini": 12000},
+            {
+                "nombre": "La Mega Costeña",
+                "descripcion": "Pollo, carne, chorizo, butifarra, suizo, lechuga, queso costeño, chongo y gratinada con jamón.",
+                "precio_normal": 27000,
+                "es_especial": True,
+                "porciones_texto": "2 personas",
+                "etiqueta": "Para compartir",
+            },
+            {
+                "nombre": "Escocés Venecosteña",
+                "descripcion": "Carne, pollo, chorizo, suizo, lechuga, queso costeño, chongo y gratinada con maíz.",
+                "precio_normal": 28000,
+                "es_especial": True,
+                "porciones_texto": "2 personas",
+                "etiqueta": "Para compartir",
+            },
+            {
+                "nombre": "Trifásica",
+                "descripcion": "Carne, pollo, chorizo, butifarra, lechuga, queso costeño y chongo.",
+                "precio_normal": 35000,
+                "es_especial": True,
+                "porciones_texto": "3 personas",
+                "etiqueta": "Para compartir",
+            },
+            {
+                "nombre": "4 Carnes",
+                "descripcion": "Carne, pollo, chorizo, butifarra, lechuga, queso costeño, chongo y gratinada con jamón.",
+                "precio_normal": 42000,
+                "es_especial": True,
+                "porciones_texto": "4 personas",
+                "etiqueta": "Para compartir",
+            },
+            {
+                "nombre": "La Súper Venecosteña",
+                "descripcion": "Carne, pollo, cerdo, chorizo, butifarra, suizo, lechuga, queso, chongo, gratinada con tocineta y maíz.",
+                "precio_normal": 57000,
+                "es_especial": True,
+                "porciones_texto": "5 personas",
+                "etiqueta": "Familiar",
+            },
+            {
+                "nombre": "La Mister Venecosteña",
+                "descripcion": "Carne, pollo, cerdo, chorizo, butifarra, lechuga, queso, chongo y gratinada con costillas BBQ, jamón y tocineta.",
+                "precio_normal": 77000,
+                "es_especial": True,
+                "porciones_texto": "7 personas",
+                "etiqueta": "Gigante",
+            },
+        ],
+    },
+    {
+        "nombre": "Mazorcas",
+        "slug": "mazorcas",
+        "descripcion": "Desgranadas con queso costeño, chongo y tus proteínas favoritas",
+        "color_acento": Categoria.AccentColor.ROJO,
+        "orden": 6,
+        "productos": [
+            {"nombre": "Sencilla", "precio_normal": 13000, "precio_mini": 7500},
+            {"nombre": "Chorizo", "precio_normal": 16000, "precio_mini": 8000},
+            {"nombre": "Butifarra", "precio_normal": 16000, "precio_mini": 8000},
+            {"nombre": "Suiza", "precio_normal": 18000, "precio_mini": 9000},
+            {"nombre": "Ranchera", "precio_normal": 17000, "precio_mini": 8000},
+            {"nombre": "Carne", "precio_normal": 19000, "precio_mini": 10000},
+            {"nombre": "Pollo", "precio_normal": 19000, "precio_mini": 9000},
+            {"nombre": "Hawaiana", "precio_normal": 17000, "precio_mini": 8000},
+            {"nombre": "Combinada (Chori-Buti)", "precio_normal": 18000, "precio_mini": 11000},
+            {"nombre": "Mixta (carne-pollo)", "precio_normal": 20000, "precio_mini": 12000},
+            {
+                "nombre": "Súper Mazorca La Venecosteña",
+                "descripcion": "Pollo, carne, cerdo, chorizo, butifarra, lechuga, queso costeño, chongo y gratinada con jamón y tocineta.",
+                "precio_normal": 27000,
+                "es_especial": True,
+                "etiqueta": "Especial de la casa",
+            },
+        ],
+    },
+    {
+        "nombre": "Chuzos Desgranados",
+        "slug": "chuzos-desgranados",
+        "descripcion": "Bien cargados con bollo, queso costeño y salsas de la casa",
+        "color_acento": Categoria.AccentColor.VERDE,
+        "orden": 7,
+        "productos": [
+            {"nombre": "Sencillo", "precio_normal": 12000, "precio_mini": 8000},
+            {"nombre": "Chorizo", "precio_normal": 18000, "precio_mini": 9000},
+            {"nombre": "Butifarra", "precio_normal": 17000, "precio_mini": 9000},
+            {"nombre": "Suizo", "precio_normal": 19000, "precio_mini": 10000},
+            {"nombre": "Ranchero", "precio_normal": 18000, "precio_mini": 9500},
+            {"nombre": "Carne", "precio_normal": 18000, "precio_mini": 10000},
+            {"nombre": "Pollo", "precio_normal": 18000, "precio_mini": 10000},
+            {"nombre": "Hawaiano", "precio_normal": 17000, "precio_mini": 9000},
+            {"nombre": "Combinado (Chori-Buti)", "precio_normal": 19000, "precio_mini": 11000},
+            {"nombre": "Mixto (carne-pollo)", "precio_normal": 20000, "precio_mini": 12000},
+            {
+                "nombre": "Maxi Desgranado La Venecosteña",
+                "descripcion": "Pollo, carne, cerdo, chorizo, butifarra, lechuga, queso costeño, chongo y gratinado con jamón.",
+                "precio_normal": 25000,
+                "es_especial": True,
+                "etiqueta": "Especial de la casa",
+            },
+        ],
+    },
+    {
+        "nombre": "Patacones",
+        "slug": "patacones",
+        "descripcion": "Crujientes y dorados al instante, con opción Normal y MINI",
+        "color_acento": Categoria.AccentColor.VERDE,
+        "orden": 8,
+        "productos": [
+            {"nombre": "Sencillo", "precio_normal": 12000, "precio_mini": 8000},
+            {"nombre": "Chorizo", "precio_normal": 17000, "precio_mini": 10000},
+            {"nombre": "Butifarra", "precio_normal": 17000, "precio_mini": 9500},
+            {"nombre": "Suizo", "precio_normal": 20000, "precio_mini": 11000},
+            {"nombre": "Ranchero", "precio_normal": 18000, "precio_mini": 10500},
+            {"nombre": "Escocés sencillo", "precio_normal": 19000, "precio_mini": 10000},
+            {"nombre": "Carne", "precio_normal": 21000, "precio_mini": 11000},
+            {"nombre": "Pollo", "precio_normal": 20000, "precio_mini": 11000},
+            {"nombre": "Pollo Suizo", "precio_normal": 24000, "precio_mini": 13000},
+            {"nombre": "Combinado (Chori-Buti)", "precio_normal": 19000, "precio_mini": 11000},
+            {"nombre": "Mixto (carne-pollo)", "precio_normal": 22000, "precio_mini": 13000},
+            {
+                "nombre": "Hamburguesa Patacón",
+                "descripcion": "Pollo, carne de hamburguesa, lechuga, tomate, cebolla, queso costeño y gratinado con jamón.",
+                "precio_normal": 21000,
+                "es_especial": True,
+                "etiqueta": "Especial",
+            },
+            {
+                "nombre": "Pataconazo La Venecosteña",
+                "descripcion": "Carne, pollo, cerdo, chorizo, butifarra, suizo, lechuga, queso costeño, chongo y gratinado con tocineta.",
+                "precio_normal": 26000,
+                "es_especial": True,
+                "etiqueta": "Especial de la casa",
+            },
+        ],
+    },
+    {
+        "nombre": "Sándwiches",
+        "slug": "sandwiches",
+        "descripcion": "Calienticos y bien rellenos",
+        "color_acento": Categoria.AccentColor.ROJO,
+        "orden": 9,
+        "productos": [
+            {"nombre": "Jamón y Queso", "precio_normal": 16000, "precio_mini": 9000},
+            {"nombre": "Combinado", "precio_normal": 18000, "precio_mini": 10000},
+            {"nombre": "Carne", "precio_normal": 20000, "precio_mini": 11000},
+            {"nombre": "Pollo", "precio_normal": 19000, "precio_mini": 10000},
+            {"nombre": "Mixto (carne-pollo)", "precio_normal": 21000, "precio_mini": 12000},
+            {
+                "nombre": "Especial La Venecosteña",
+                "descripcion": "Pollo, carne, cerdo, chorizo, butifarra, lechuga, tomate, cebolla grillo y gratinado acompañado de papas francesas.",
+                "precio_normal": 27000,
+                "es_especial": True,
+                "etiqueta": "Especial de la casa",
+            },
+        ],
+    },
+    {
+        "nombre": "Asados",
+        "slug": "asados",
+        "descripcion": "Al carbón y a la plancha, con acompañantes frescos",
+        "color_acento": Categoria.AccentColor.VERDE,
+        "orden": 10,
+        "productos": [
+            {"nombre": "Pechuga", "precio_normal": 25000, "precio_mini": 14000},
+            {"nombre": "Carne", "precio_normal": 26000, "precio_mini": 15000},
+            {"nombre": "Cerdo", "precio_normal": 25000, "precio_mini": 14000},
+            {"nombre": "Pechuga BBQ", "precio_normal": 25000, "precio_mini": 14000},
+            {"nombre": "Pechuga Gratinada", "precio_normal": 27000, "precio_mini": 15000},
+            {"nombre": "Mixto (carne-pollo)", "precio_normal": 29000, "precio_mini": 16000},
+            {
+                "nombre": "Parrillada La Venecosteña",
+                "descripcion": "Carne, pollo, cerdo, chorizo y butifarra, acompañada de papas francesas o bollo y ensalada.",
+                "precio_normal": 32000,
+                "es_especial": True,
+                "etiqueta": "Parrilla",
+            },
+            {
+                "nombre": "La Master Parrillada Venecosteña",
+                "descripcion": "Pollo, carne, cerdo, chorizo, butifarra, acompañada de patacones y ensalada.",
+                "precio_normal": 46000,
+                "es_especial": True,
+                "etiqueta": "Master",
+            },
+        ],
+    },
+    {
+        "nombre": "Bebidas",
+        "slug": "bebidas",
+        "descripcion": "Frías para acompañar tu pedido (precios editables desde Admin)",
+        "color_acento": Categoria.AccentColor.ROJO,
+        "orden": 11,
+        "productos": [
+            {"nombre": "Agua Pequeña", "precio_normal": 0},
+            {"nombre": "Agua Personal", "precio_normal": 0},
+            {"nombre": "Agua Manzana Pequeña", "precio_normal": 0},
+            {"nombre": "Agua Manzana Personal", "precio_normal": 0},
+            {"nombre": "Agua Manzana 1.5L", "precio_normal": 0},
+            {"nombre": "Coca-Cola Pequeña", "precio_normal": 0},
+            {"nombre": "Coca-Cola Personal", "precio_normal": 0},
+            {"nombre": "Coca-Cola 1.5L", "precio_normal": 0},
+            {"nombre": "Coca-Cola 2.5L", "precio_normal": 0},
+            {"nombre": "Mr. Tea", "precio_normal": 0},
+            {"nombre": "Postobón Pequeña", "precio_normal": 0},
+            {"nombre": "Postobón Personal", "precio_normal": 0},
+            {"nombre": "Postobón Litro", "precio_normal": 0},
+            {"nombre": "Postobón 1.5L", "precio_normal": 0},
+            {"nombre": "Postobón 2.5L", "precio_normal": 0},
+            {"nombre": "Hit Personal", "precio_normal": 0},
+            {"nombre": "Hit Litro", "precio_normal": 0},
+            {"nombre": "Pony Personal", "precio_normal": 0},
+            {"nombre": "Pony Litro", "precio_normal": 0},
+            {"nombre": "Jugos Naturales", "precio_normal": 0},
+        ],
+    },
+]
+
+ADICIONALES_DATA = [
+    ("Porción Papas", 7000),
+    ("Gratinado", 4000),
+    ("Bollo", 2000),
+    ("Suizo", 6000),
+    ("Medio Suizo", 4000),
+    ("Carne", 5000),
+    ("Pollo", 5000),
+    ("Chorizo", 4000),
+    ("Butifarra", 4000),
+    ("Tocineta", 3000),
+    ("Cerdo", 5000),
+    ("Costillas BBQ", 10000),
+    ("Jamón", 3000),
+    ("Maíz", 4000),
+    ("Grillo", 2000),
+]
+
+
+class Command(BaseCommand):
+    help = "Carga idempotentemente el menú completo oficial de La VeneConsteña."
+
+    @transaction.atomic
+    def handle(self, *args, **options):
+        cat_count = 0
+        prod_count = 0
+        for cat_info in MENU_DATA:
+            productos = cat_info["productos"]
+            categoria, _ = Categoria.objects.update_or_create(
+                slug=cat_info["slug"],
+                defaults={
+                    "nombre": cat_info["nombre"],
+                    "descripcion": cat_info.get("descripcion", ""),
+                    "color_acento": cat_info.get("color_acento", Categoria.AccentColor.ROJO),
+                    "es_promocion": cat_info.get("es_promocion", False),
+                    "orden": cat_info["orden"],
+                    "activa": True,
+                },
+            )
+            cat_count += 1
+            for idx, item in enumerate(productos, start=1):
+                Producto.objects.update_or_create(
+                    categoria=categoria,
+                    nombre=item["nombre"],
+                    defaults={
+                        "descripcion": item.get("descripcion", ""),
+                        "precio_normal": item["precio_normal"],
+                        "precio_mini": item.get("precio_mini"),
+                        "es_especial": item.get("es_especial", False),
+                        "porciones_texto": item.get("porciones_texto", ""),
+                        "etiqueta": item.get("etiqueta", ""),
+                        "disponible": True,
+                        "orden": idx,
+                    },
+                )
+                prod_count += 1
+
+        adic_count = 0
+        for idx, (nombre, precio) in enumerate(ADICIONALES_DATA, start=1):
+            Adicional.objects.update_or_create(
+                nombre=nombre,
+                defaults={"precio": precio, "disponible": True, "orden": idx},
+            )
+            adic_count += 1
+
+        self.stdout.write(
+            self.style.SUCCESS(
+                f"Menú cargado: {cat_count} categorías, {prod_count} productos, {adic_count} adicionales."
+            )
+        )

@@ -1,0 +1,77 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+:root {
+  --rojo: #E4492F;
+  --rojo-cta: #C8371E;
+  --rojo-hover: #AD2C16;
+  --rojo-soft: #FDECE8;
+  --verde: #8AB544;
+  --verde-text: #426312;
+  --verde-soft: #EEF6DF;
+  --mostaza: #E8B93E;
+  --mostaza-text: #7A5600;
+  --mostaza-soft: #FDF4D7;
+  --marron: #4A2C25;
+  --marron-muted: #75564E;
+  --crema: #FFF8EC;
+  --crema-elevated: #FAF0DE;
+  --blanco: #FFFFFF;
+  --borde: #EBDCCB;
+  --negro: #1A1A1A;
+}
+
+@layer base {
+  html {
+    scroll-behavior: smooth;
+    -webkit-tap-highlight-color: transparent;
+  }
+
+  body {
+    background-color: var(--crema);
+    color: var(--marron);
+    font-family: "Nunito", system-ui, sans-serif;
+    overflow-x: hidden;
+  }
+
+  button,
+  a,
+  [role="button"] {
+    touch-action: manipulation;
+  }
+}
+
+@layer utilities {
+  .tabular-price {
+    font-variant-numeric: tabular-nums;
+  }
+
+  .sticker-drop {
+    filter: drop-shadow(0 8px 16px rgba(74, 44, 37, 0.16));
+  }
+
+  .no-scrollbar::-webkit-scrollbar {
+    display: none;
+  }
+
+  .no-scrollbar {
+    -ms-overflow-style: none;
+    scrollbar-width: none;
+  }
+
+  .safe-bottom {
+    padding-bottom: max(1rem, env(safe-area-inset-bottom));
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+    scroll-behavior: auto !important;
+  }
+}
