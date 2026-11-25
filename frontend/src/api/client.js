@@ -1,6 +1,8 @@
 const API_BASE = (import.meta.env.VITE_API_URL || "").replace(/\/$/, "");
 const AUTH_STORAGE_KEY = "vc_auth_v1";
 
+let refreshInFlight = null;
+
 export function getStoredAuth() {
   try {
     const raw = localStorage.getItem(AUTH_STORAGE_KEY);
@@ -16,9 +18,45 @@ export function setStoredAuth(payload) {
   } else {
     localStorage.setItem(AUTH_STORAGE_KEY, JSON.stringify(payload));
   }
+  if (typeof window !== "undefined") {
+    window.dispatchEvent(new CustomEvent("vc-auth-changed", { detail: payload }));
+  }
 }
 
-export async function apiRequest(path, options = {}) {
+async function tryRefreshAccessToken() {
+  const auth = getStoredAuth();
+  if (!auth?.refresh) return null;
+
+  if (!refreshInFlight) {
+    refreshInFlight = fetch(`${API_BASE}/api/v1/auth/refresh/`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ refresh: auth.refresh }),
+    })
+      .then(async (res) => {
+        if (!res.ok) {
+          setStoredAuth(null);
+          return null;
+        }
+        const data = await res.json();
+        const updated = {
+          ...auth,
+          access: data.access,
+          refresh: data.refresh || auth.refresh,
+        };
+        setStoredAuth(updated);
+        return updated.access;
+      })
+      .catch(() => null)
+      .finally(() => {
+        refreshInFlight = null;
+      });
+  }
+
+  return refreshInFlight;
+}
+
+export async function apiRequest(path, options = {}, _retried = false) {
   const url = `${API_BASE}${path}`;
   const auth = getStoredAuth();
   const isFormData = options.body instanceof FormData;
@@ -35,6 +73,13 @@ export async function apiRequest(path, options = {}) {
     ...options,
     headers,
   });
+
+  if (response.status === 401 && options.auth !== false && !_retried && auth?.refresh) {
+    const newAccess = await tryRefreshAccessToken();
+    if (newAccess) {
+      return apiRequest(path, options, true);
+    }
+  }
 
   if (!response.ok) {
     let detail = `Error ${response.status}`;
@@ -58,14 +103,35 @@ export async function apiRequest(path, options = {}) {
   return response.json();
 }
 
-export async function fetchBlobWithAuth(path) {
+export async function fetchBlobWithAuth(path, _retried = false) {
   const url = `${API_BASE}${path}`;
   const auth = getStoredAuth();
   const response = await fetch(url, {
     headers: auth?.access ? { Authorization: `Bearer ${auth.access}` } : {},
   });
+  if (response.status === 401 && !_retried && auth?.refresh) {
+    const newAccess = await tryRefreshAccessToken();
+    if (newAccess) return fetchBlobWithAuth(path, true);
+  }
   if (!response.ok) throw new Error(`Error ${response.status}`);
   return response.blob();
+}
+
+function buildProductBody(data) {
+  if (data instanceof FormData) return data;
+  if (data?.imagenFile instanceof File) {
+    const fd = new FormData();
+    Object.entries(data).forEach(([k, v]) => {
+      if (k === "imagenFile") {
+        fd.append("imagen", v);
+      } else if (v !== undefined) {
+        fd.append(k, v === null ? "" : String(v));
+      }
+    });
+    return fd;
+  }
+  const { imagenFile, ...clean } = data || {};
+  return JSON.stringify(clean);
 }
 
 export function fetchHealth() {
@@ -157,12 +223,12 @@ export const adminMenuApi = {
   createProducto: (data) =>
     apiRequest("/api/v1/menu/admin/productos/", {
       method: "POST",
-      body: JSON.stringify(data),
+      body: buildProductBody(data),
     }),
   updateProducto: (id, data) =>
     apiRequest(`/api/v1/menu/admin/productos/${id}/`, {
       method: "PATCH",
-      body: JSON.stringify(data),
+      body: buildProductBody(data),
     }),
   deleteProducto: (id) =>
     apiRequest(`/api/v1/menu/admin/productos/${id}/`, {
@@ -195,7 +261,6 @@ export const adminMenuApi = {
 };
 
 export const adminFullApi = {
-  // Mesas & QR
   listMesas: () => apiRequest("/api/v1/mesas/admin/"),
   createMesa: (data) =>
     apiRequest("/api/v1/mesas/admin/", {
@@ -213,7 +278,6 @@ export const adminFullApi = {
     }),
   downloadMesaQrBlob: (id) => fetchBlobWithAuth(`/api/v1/mesas/admin/${id}/qr/`),
 
-  // Usuarios
   listUsuarios: () => apiRequest("/api/v1/auth/admin/usuarios/"),
   createUsuario: (data) =>
     apiRequest("/api/v1/auth/admin/usuarios/", {
@@ -230,7 +294,6 @@ export const adminFullApi = {
       method: "DELETE",
     }),
 
-  // Configuración local
   getConfigLocal: () => apiRequest("/api/v1/local/admin/config/"),
   updateConfigLocal: (data) =>
     apiRequest("/api/v1/local/admin/config/", {
@@ -238,7 +301,6 @@ export const adminFullApi = {
       body: JSON.stringify(data),
     }),
 
-  // Ventas e historial
   getVentasResumen: (rango = "hoy") =>
     apiRequest(`/api/v1/pedidos/admin/ventas/?rango=${encodeURIComponent(rango)}`),
 };

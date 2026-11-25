@@ -1,10 +1,25 @@
-import { createContext, useCallback, useContext, useMemo, useState } from "react";
+import {
+  createContext,
+  useCallback,
+  useContext,
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
 import { getStoredAuth, loginRequest, setStoredAuth } from "../api/client";
 
 const AuthContext = createContext(null);
 
 export function AuthProvider({ children }) {
   const [auth, setAuth] = useState(() => getStoredAuth());
+
+  useEffect(() => {
+    const syncAuth = (event) => {
+      setAuth(event.detail ?? getStoredAuth());
+    };
+    window.addEventListener("vc-auth-changed", syncAuth);
+    return () => window.removeEventListener("vc-auth-changed", syncAuth);
+  }, []);
 
   const login = useCallback(async (username, password) => {
     const data = await loginRequest({ username, password });

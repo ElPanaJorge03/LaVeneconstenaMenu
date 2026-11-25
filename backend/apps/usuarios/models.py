@@ -17,6 +17,11 @@ class User(AbstractUser):
         verbose_name = "Usuario"
         verbose_name_plural = "Usuarios"
 
+    def save(self, *args, **kwargs):
+        if self.is_superuser:
+            self.rol = self.Role.ADMIN
+        super().save(*args, **kwargs)
+
     @property
     def is_admin_role(self) -> bool:
         return self.is_superuser or self.rol == self.Role.ADMIN

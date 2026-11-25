@@ -126,11 +126,20 @@ export function AdminMenuPage() {
           <MascotState
             variant="error"
             title="Solo para administradores"
-            description="Tu cuenta actual no tiene permisos para editar la carta. Inicia sesión con un usuario Admin."
+            description="Tu cuenta actual no tiene permisos para editar la carta. Inicia sesión con un usuario Admin o vuelve al panel de mesera."
             action={
-              <Button size="sm" onClick={logout}>
-                Cambiar de cuenta
-              </Button>
+              <div className="flex flex-wrap items-center justify-center gap-2">
+                <Link
+                  to="/mesera"
+                  className="inline-flex items-center gap-1.5 min-h-[44px] px-5 rounded-full bg-rojo-cta text-blanco font-heading font-bold text-sm"
+                >
+                  <ChefHat size={17} weight="duotone" aria-hidden="true" />
+                  <span>Ir a Panel Mesera</span>
+                </Link>
+                <Button variant="secondary" size="sm" onClick={logout}>
+                  Cambiar de cuenta
+                </Button>
+              </div>
             }
           />
         </main>
@@ -156,6 +165,7 @@ export function AdminMenuPage() {
       etiqueta: productModal.etiqueta.trim(),
       disponible: Boolean(productModal.disponible),
       orden: parseInt(productModal.orden || 1, 10) || 1,
+      ...(productModal.imagenFile ? { imagenFile: productModal.imagenFile } : {}),
     };
 
     try {
@@ -813,6 +823,30 @@ export function AdminMenuPage() {
                 <span className="text-sm font-bold text-marron">
                   Destacar como Especial
                 </span>
+              </label>
+
+              <label className="sm:col-span-2 block space-y-1.5">
+                <span className="text-xs font-extrabold text-marron">
+                  Foto del plato (opcional · JPG/PNG/WebP)
+                </span>
+                {productModal.imagen && !productModal.imagenFile ? (
+                  <img
+                    src={productModal.imagen}
+                    alt={productModal.nombre}
+                    className="w-20 h-20 rounded-2xl object-cover border border-borde"
+                  />
+                ) : null}
+                <input
+                  type="file"
+                  accept="image/*"
+                  onChange={(e) =>
+                    setProductModal({
+                      ...productModal,
+                      imagenFile: e.target.files?.[0] || null,
+                    })
+                  }
+                  className="w-full text-xs text-marron file:mr-3 file:py-2 file:px-4 file:rounded-full file:border-0 file:bg-crema-elevated file:font-bold file:text-marron hover:file:bg-mostaza-soft cursor-pointer"
+                />
               </label>
             </div>
 

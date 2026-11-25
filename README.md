@@ -39,10 +39,18 @@ cd backend && .\.venv\Scripts\python.exe -m pytest -v
 cd frontend && npm.cmd test && npm.cmd run build
 ```
 
-## Despliegue en Railway
-1. Crea un proyecto en Railway y conecta este repositorio.
+## Despliegue en Railway (Monorepo)
+1. Crea un proyecto en Railway conectado a este repositorio.
 2. Agrega los servicios **PostgreSQL** y **Redis**.
-3. Crea servicio **Backend** usando `backend/railway.toml` y configura las variables de `.env.example` (`SECRET_KEY`, `DEBUG=False`, `DATABASE_URL`, `REDIS_URL`, `ALLOWED_HOSTS`, `CORS_ALLOWED_ORIGINS`, `CSRF_TRUSTED_ORIGINS`, `FRONTEND_URL`, `BOLD_API_KEY`, `BOLD_SECRET_KEY`, `CLOUDINARY_URL`).
-4. Crea servicio **Frontend** usando `frontend/railway.toml` con `VITE_API_URL` y `VITE_WS_URL` apuntando al dominio público del backend.
-5. En el portal de Bold configura la URL del webhook apuntando a `https://<tu-backend>/api/v1/pagos/bold/webhook/`.
-6. Corre una vez `python manage.py seed_menu` y `python manage.py createsuperuser` en el servicio backend.
+3. Crea servicio **Backend** con **Root Directory = `backend`** (usa automáticamente `backend/railway.toml` y `backend/Dockerfile`) y configura las variables de `.env.example`:
+   - `SECRET_KEY`, `DEBUG=False`, `DATABASE_URL` (referencia Postgres), `REDIS_URL` (referencia Redis)
+   - `ALLOWED_HOSTS=<dominio-backend>.up.railway.app`
+   - `CORS_ALLOWED_ORIGINS=https://<dominio-frontend>.up.railway.app`
+   - `CSRF_TRUSTED_ORIGINS=https://<dominio-backend>.up.railway.app,https://<dominio-frontend>.up.railway.app`
+   - `FRONTEND_URL=https://<dominio-frontend>.up.railway.app`
+   - `BOLD_API_KEY`, `BOLD_SECRET_KEY`, `CLOUDINARY_URL`
+4. Crea servicio **Frontend** con **Root Directory = `frontend`** (usa `frontend/railway.toml`, `frontend/Dockerfile` y Nginx con `${PORT}` dinámico) y define como variables de build:
+   - `VITE_API_URL=https://<dominio-backend>.up.railway.app`
+   - `VITE_WS_URL=wss://<dominio-backend>.up.railway.app`
+5. En el portal de Bold registra el webhook: `https://<dominio-backend>.up.railway.app/api/v1/pagos/bold/webhook/`.
+6. Corre una vez en el servicio Backend: `python manage.py seed_menu` y `python manage.py createsuperuser` (el superusuario recibe automáticamente rol `admin`).

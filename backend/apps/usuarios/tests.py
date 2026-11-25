@@ -45,3 +45,12 @@ class TestAuthAndRolePermissions:
         self.client.credentials(HTTP_AUTHORIZATION=f"Bearer {token}")
         assert self.client.get(reverse("auth-check-panel")).status_code == 200
         assert self.client.get(reverse("auth-check-admin")).status_code == 200
+
+    def test_superuser_automatically_gets_admin_role(self):
+        su = User.objects.create_superuser(
+            username="root_railway",
+            email="root@example.com",
+            password="StrongPassword123!",
+        )
+        assert su.rol == User.Role.ADMIN
+        assert su.is_admin_role is True

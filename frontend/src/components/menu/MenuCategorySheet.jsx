@@ -132,21 +132,31 @@ export function MenuCategorySheet({
                     key={prod.id}
                     className="px-4 sm:px-5 py-2.5 sm:py-3 flex items-center justify-between gap-2.5 even:bg-crema/35 hover:bg-mostaza-soft/30 transition-colors"
                   >
-                    <div className="min-w-0 flex-1 pr-1">
-                      <button
-                        type="button"
-                        onClick={() =>
-                          onSelectProduct(prod, categoria.nombre, "normal")
-                        }
-                        className="text-left font-heading font-bold text-[15px] sm:text-base text-marron hover:text-rojo-cta transition-colors cursor-pointer leading-snug focus-visible:outline-none focus-visible:underline"
-                      >
-                        {prod.nombre}
-                      </button>
-                      {prod.descripcion ? (
-                        <p className="text-xs text-marron-muted mt-0.5 leading-snug">
-                          {prod.descripcion}
-                        </p>
+                    <div className="min-w-0 flex-1 pr-1 flex items-center gap-3">
+                      {prod.imagen ? (
+                        <img
+                          src={prod.imagen}
+                          alt={prod.nombre}
+                          loading="lazy"
+                          className="w-12 h-12 rounded-2xl object-cover border border-borde shrink-0 bg-crema-elevated"
+                        />
                       ) : null}
+                      <div className="min-w-0">
+                        <button
+                          type="button"
+                          onClick={() =>
+                            onSelectProduct(prod, categoria.nombre, "normal")
+                          }
+                          className="text-left font-heading font-bold text-[15px] sm:text-base text-marron hover:text-rojo-cta transition-colors cursor-pointer leading-snug focus-visible:outline-none focus-visible:underline"
+                        >
+                          {prod.nombre}
+                        </button>
+                        {prod.descripcion ? (
+                          <p className="text-xs text-marron-muted mt-0.5 leading-snug">
+                            {prod.descripcion}
+                          </p>
+                        ) : null}
+                      </div>
                     </div>
 
                     <div className="flex items-center gap-2 shrink-0">
